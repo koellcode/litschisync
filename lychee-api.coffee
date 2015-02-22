@@ -50,7 +50,6 @@ module.exports = ({host, db, user, password}) ->
             resolve id: info.insertId
 
     insertPhoto: (imageModel) -> new Promise (resolve, reject) =>
-        delete imageModel.meta
         func = "insert into #{db}.#{tables.photos}"
         columns = Object.keys(imageModel)
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"

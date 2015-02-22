@@ -88,7 +88,6 @@ module.exports = (lychee) ->
         paths = absolutePath.split '/'
         fotoModel.title = paths.pop()
         fotoModel.description = new Date()
-        fotoModel.id = just.ljust "#{Date.now()}", 14, '0'
         fotoModel.checksum = @_getSHA1 absolutePath
 
         fotoModel.meta = {}
@@ -102,8 +101,17 @@ module.exports = (lychee) ->
 
         return fotoModel
 
+    _getRandomInt: (min, max) ->
+        Math.floor(Math.random() * (max - min + 1)) + min
+
+    _generatePhotoID: ->
+        just.ljust "#{Date.now()}", 14, "#{@_getRandomInt 0, 9}"
+
     _insertPhotoToDB: (photo, done = ->) ->
         albumTitle = photo.meta.parentName
+        photo.id = @_generatePhotoID()
+        delete photo.meta
+
         lychee.albumExist albumTitle
         .catch ALBUM_NOT_EXIST_ERROR, ->
             lychee.createAlbum albumTitle
