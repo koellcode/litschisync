@@ -37,13 +37,13 @@ module.exports = ({host, db, user, password}) ->
         .pipe inspectpoint()
         .pipe process.stdout
 
-    createAlbum: (title, publish = 0) -> new Promise (resolve, reject) =>
+    createAlbum: (title, publish = 0, sysstamp = new Date().getTime() / 1000) -> new Promise (resolve, reject) =>
         func = "insert into #{db}.#{tables.album}"
         columns = ['title', 'sysstamp', 'public', 'password']
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
         client.statement(statement).execute
             title: title
-            sysstamp: Date.now()
+            sysstamp: sysstamp
             public: publish
         , (err, rows, info) ->
             return reject new ALBUM_CREATION_ERROR err.message if err
