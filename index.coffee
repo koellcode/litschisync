@@ -5,18 +5,30 @@ lychee = require('./lychee-api')(config.lychee_database)
 sync = require('./sync')(lychee)
 
 watcher = beholder "#{config.lychee_sync_dir}/**/*"
+program = require 'commander'
 
-watcher.on 'ready', ->
-    console.log "litschisync is ready and watching #{config.lychee_sync_dir}"
-    lychee.connect()
-    sync.start watcher.list()
 
-watcher.on 'new', (file, event) ->
-    console.log '%s add detected.', file
-    sync.addFile file
+program
+    .usage('edit configure your coffee.conf')
+    .option('-r, --reset', 'clean the whole lychee out from all photos and files')
+    .parse(process.argv)
 
-watcher.on 'remove', (file, event) ->
-    console.log '%s removal detected.', file
-    sync.removeFile file
+lychee.connect ->
+
+    if program.reset
+        lychee.reset().then -> process.exit 0
+
+    watcher.on 'ready', ->
+        console.log "litschisync is ready and watching #{config.lychee_sync_dir}"
+
+        sync.start watcher.list()
+
+    watcher.on 'new', (file, event) ->
+        console.log '%s add detected.', file
+        sync.addFile file
+
+    watcher.on 'remove', (file, event) ->
+        console.log '%s removal detected.', file
+        sync.removeFile file
 
 

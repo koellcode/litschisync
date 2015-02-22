@@ -26,6 +26,7 @@
     "highland": "*",
     "mkdirp": "*",
     "mariastream": "koellcode/mariastream",
-    "string-just": "*"
+    "string-just": "*",
+    "commander": "*"
   }
 }

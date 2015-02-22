@@ -24,12 +24,12 @@ module.exports = ({host, db, user, password}) ->
         HASH_NOT_EXIST_ERROR: HASH_NOT_EXIST_ERROR
         ALBUM_NOT_EXIST_ERROR: ALBUM_NOT_EXIST_ERROR
 
-    connect: ->
+    connect: (cb = ->) ->
         client = mariastream()
         client.on 'error', (err) ->
             console.log err
 
-        client.connect {host, db, user, password}
+        client.connect {host, db, user, password}, cb
 
     getAlbums: ->
         client.statement "SELECT title FROM #{db}.#{tables.album}"
@@ -65,7 +65,6 @@ module.exports = ({host, db, user, password}) ->
             return reject err if err
             resolve()
 
-
     albumExist: (title) -> new Promise (resolve, reject) ->
         client.statement "SELECT COUNT(title) as exist, id FROM #{db}.#{tables.album} WHERE title = :title"
         .readable title: title
@@ -85,6 +84,25 @@ module.exports = ({host, db, user, password}) ->
                 resolve sha
         .on 'error', (err) ->
             reject err
+
+    resetPhotos: -> new Promise (resolve, reject) ->
+        statement = "delete from #{db}.#{tables.photos}"
+        client.statement(statement).execute {}, (err, rows, info) ->
+            return reject err if err
+            console.log "removed #{info.affectedRows} photos"
+            resolve()
+
+    resetAlbums: -> new Promise (resolve, reject) ->
+        statement = "delete from #{db}.#{tables.album}"
+        client.statement(statement).execute {}, (err, rows, info) ->
+            return reject err if err
+            console.log "removed #{info.affectedRows} albums"
+            resolve()
+
+    reset: -> new Promise (resolve, reject) =>
+        @resetPhotos()
+        .then => @resetAlbums()
+        .then -> resolve()
 
     _getDef: (columns) ->
         columns.join ', '
