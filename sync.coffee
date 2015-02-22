@@ -5,6 +5,7 @@ async = require 'async'
 just = require 'string-just'
 mkdirp = require 'mkdirp'
 {abspath} = require('file').path
+Promise = require 'bluebird'
 
 config = require './config'
 Photo = require './model/photo'
@@ -13,6 +14,7 @@ Photo = require './model/photo'
 bigFiles = "#{config.lychee_root}/uploads/big"
 thumbFiles = "#{config.lychee_root}/uploads/thumb"
 
+unlink = Promise.promisify fs.unlink
 
 module.exports = (lychee) ->
     thumbnailQueue = null
@@ -29,41 +31,41 @@ module.exports = (lychee) ->
 
     addFile: (file, done = ->) ->
         photo = @_extractFileInfo abspath file
-        @_getSHA1FromFile photo.meta.absolutePath, (hash) =>
-            return done() unless hash?
+        @_fileExist photo.meta.absolutePath, (exists) =>
+            return done() if exists
 
-            photo.meta.hash = hash
-            @_enrichFileInfo photo, hash
             copyReader = fs.createReadStream photo.meta.absolutePath
             copyReader.on 'end', => @_insertPhotoToDB photo, done
 
             @_transformThumb copyReader, photo
             @_copyOriginal copyReader, photo
 
+    removeFile: (file, done = ->) ->
+        photo = @_extractFileInfo abspath file
+        lychee.removePhoto photo.checksum
+        .then ->
+            unlink photo.meta.absolutePathThumbTarget
+        .then ->
+            unlink photo.meta.absolutePathBigTarget
+            done()
+        .catch Error, (err) ->
+            console.log "error on removal: ", err
+            done err
 
-
-    _getSHA1FromFile: (filepath, cb) ->
-        shaStream = crypto.createHash 'sha1'
-        shaStream.setEncoding 'hex'
-
-        shaReader = fs.createReadStream filepath
-        shaReader.on 'error', (err) -> console.log "shaReader error: ", err
-        shaStream.on 'not_in_db', cb
-        shaStream.on 'in_db', cb
-        shaStream.on 'finish', @_handleSHA1
-        shaReader.pipe(shaStream)
-
-
-    _handleSHA1: ->
-        shaHash = @read()
+    _fileExist: (filepath, cb) ->
         # ask against database if sha1 is already synced
-        lychee.hashExist(shaHash)
-            .then => @emit 'in_db'
+        lychee.hashExist @_getSHA1 filepath
+            .then -> cb true
             .catch HASH_NOT_EXIST_ERROR, (err) =>
-                @emit 'not_in_db', shaHash
+                cb false
+
+    _getSHA1: (filepath) ->
+        shasum = crypto.createHash 'sha1'
+        shasum.update filepath
+        shasum.digest 'hex'
 
     _transformThumb: (reader, photo) ->
-        absoluteThumbPath = "#{thumbFiles}/#{photo.meta.hash}.#{photo.meta.extension}"
+        absoluteThumbPath = photo.meta.absolutePathThumbTarget
         thumbWriter = fs.createWriteStream absoluteThumbPath
         resize = gm
             format: 'jpg'
@@ -76,7 +78,7 @@ module.exports = (lychee) ->
         thumbWriter.on 'error', (err) -> console.log "writer error: ", err
 
     _copyOriginal: (reader, photo) ->
-        absoluteBigPath = "#{bigFiles}/#{photo.meta.hash}.#{photo.meta.extension}"
+        absoluteBigPath = photo.meta.absolutePathBigTarget
         outWriter = fs.createWriteStream absoluteBigPath
         outWriter.on 'finish', -> console.log "#{absoluteBigPath} copied"
         reader.pipe(outWriter)
@@ -86,17 +88,19 @@ module.exports = (lychee) ->
         paths = absolutePath.split '/'
         fotoModel.title = paths.pop()
         fotoModel.description = new Date()
-        fotoModel.meta =
-            parentName: paths.pop()
-            absolutePath: absolutePath
-            extension: absolutePath.split('.').pop()
+        fotoModel.id = just.ljust "#{Date.now()}", 14, '0'
+        fotoModel.checksum = @_getSHA1 absolutePath
+
+        fotoModel.meta = {}
+        fotoModel.meta.parentName = paths.pop()
+        fotoModel.meta.absolutePath = absolutePath
+        fotoModel.meta.extension = absolutePath.split('.').pop()
+        fotoModel.meta.absolutePathBigTarget = "#{bigFiles}/#{fotoModel.checksum}.#{fotoModel.meta.extension}"
+        fotoModel.meta.absolutePathThumbTarget = "#{thumbFiles}/#{fotoModel.checksum}.#{fotoModel.meta.extension}"
+
+        fotoModel.url = fotoModel.thumbUrl = "#{fotoModel.checksum}.#{fotoModel.meta.extension}"
 
         return fotoModel
-
-    _enrichFileInfo: (fotoModel, hash) ->
-        fotoModel.id = just.ljust "#{Date.now()}", 14, '0'
-        fotoModel.url = fotoModel.thumbUrl = "#{fotoModel.meta.hash}.#{fotoModel.meta.extension}"
-        fotoModel.checksum = "#{fotoModel.meta.hash}"
 
     _insertPhotoToDB: (photo, done = ->) ->
         albumTitle = photo.meta.parentName

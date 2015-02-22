@@ -56,12 +56,18 @@ module.exports = ({host, db, user, password}) ->
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
         client.statement(statement).execute imageModel, (err, rows, info) ->
             return reject err if err
-            # more semantic error handling here plz
+            # TODO: more semantic error handling here plz
+            resolve()
+
+    removePhoto: (checksum) -> new Promise (resolve, reject) ->
+        statement = "delete from #{db}.#{tables.photos} WHERE checksum = :checksum"
+        client.statement(statement).execute {checksum}, (err, rows, info) ->
+            return reject err if err
             resolve()
 
 
     albumExist: (title) -> new Promise (resolve, reject) ->
-        client.statement("SELECT COUNT(title) as exist, id FROM #{db}.#{tables.album} WHERE title = :title")
+        client.statement "SELECT COUNT(title) as exist, id FROM #{db}.#{tables.album} WHERE title = :title"
         .readable title: title
         .on 'data', (data) ->
             if data.exist is '0'

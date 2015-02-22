@@ -15,5 +15,8 @@ watcher.on 'new', (file, event) ->
     console.log '%s add detected.', file
     sync.addFile file
 
+watcher.on 'remove', (file, event) ->
+    console.log '%s removal detected.', file
+    sync.removeFile file
 
 
