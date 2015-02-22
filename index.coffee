@@ -13,7 +13,7 @@ watcher.on 'ready', ->
 
 watcher.on 'new', (file, event) ->
     console.log '%s add detected.', file
-    sync.writeThumbnail file
+    sync.addFile file
 
 
 

@@ -20,23 +20,18 @@ module.exports = (lychee) ->
 
     start: (localFiles) ->
         localFiles = [localFiles] if not Array.isArray localFiles
-        thumbnailQueue = async.queue @writeThumbnail.bind(this), 4
+        thumbnailQueue = async.queue @addFile.bind(this), 4
 
         async.each ["#{bigFiles}", "#{thumbFiles}"], (path, done) ->
             mkdirp path, null, done
         , (err) =>
             thumbnailQueue.push file for file in localFiles
 
-    writeThumbnail: (file, done = ->) ->
+    addFile: (file, done = ->) ->
         photo = @_extractFileInfo abspath file
-        shaStream = crypto.createHash 'sha1'
-        shaStream.setEncoding 'hex'
+        @_getSHA1FromFile photo.meta.absolutePath, (hash) =>
+            return done() unless hash?
 
-        shaReader = fs.createReadStream photo.meta.absolutePath
-        shaReader.on 'error', (err) -> console.log "shaReader error: ", err
-        shaReader.pipe(shaStream)
-
-        shaStream.on 'not_in_db', (hash) =>
             photo.meta.hash = hash
             @_enrichFileInfo photo, hash
             copyReader = fs.createReadStream photo.meta.absolutePath
@@ -46,10 +41,18 @@ module.exports = (lychee) ->
             @_copyOriginal copyReader, photo
 
 
-        shaStream.on 'in_db', ->
-            done()
 
+    _getSHA1FromFile: (filepath, cb) ->
+        shaStream = crypto.createHash 'sha1'
+        shaStream.setEncoding 'hex'
+
+        shaReader = fs.createReadStream filepath
+        shaReader.on 'error', (err) -> console.log "shaReader error: ", err
+        shaStream.on 'not_in_db', cb
+        shaStream.on 'in_db', cb
         shaStream.on 'finish', @_handleSHA1
+        shaReader.pipe(shaStream)
+
 
     _handleSHA1: ->
         shaHash = @read()
