@@ -68,7 +68,10 @@ module.exports = (lychee) ->
         absoluteThumbPath = photo.meta.absolutePathThumbTarget
         thumbWriter = fs.createWriteStream absoluteThumbPath
         gm reader
-        .resize 500, 500
+        .resize 400
+        .size (err, size) ->
+            photo.width = size.width
+            photo.height = size.height
         .stream (err, stdout) ->
             stdout.pipe(thumbWriter)
 
@@ -77,10 +80,6 @@ module.exports = (lychee) ->
             done()
         thumbWriter.once 'error', (err) -> console.log "writer error: ", err
 
-        gm reader
-        .size (err, size) ->
-            photo.width = size.width
-            photo.height = size.height
 
     _copyOriginal: (reader, photo) ->
         absoluteBigPath = photo.meta.absolutePathBigTarget
