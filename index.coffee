@@ -18,17 +18,17 @@ lychee.connect ->
     if program.reset
         lychee.reset().then -> process.exit 0
 
-    watcher.on 'ready', ->
-        console.log "litschisync is ready and watching #{config.lychee_sync_dir}"
 
-        sync.start watcher.list()
+watcher.on 'ready', ->
+    console.log "litschisync is ready and watching #{config.lychee_sync_dir}"
+    sync.start watcher.list()
 
-    watcher.on 'new', (file, event) ->
-        console.log '%s add detected.', file
-        sync.addFile file
+watcher.on 'new', (file, event) ->
+    console.log '%s add detected.', file
+    sync.addFile file
 
-    watcher.on 'remove', (file, event) ->
-        console.log '%s removal detected.', file
-        sync.removeFile file
+watcher.on 'remove', (file, event) ->
+    console.log '%s removal detected.', file
+    sync.removeFile file
 
 
