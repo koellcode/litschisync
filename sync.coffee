@@ -68,7 +68,9 @@ module.exports = (lychee) ->
         absoluteThumbPath = photo.meta.absolutePathThumbTarget
         thumbWriter = fs.createWriteStream absoluteThumbPath
         gm reader
-        .resize 400
+        .resize '200', '200^'
+        .gravity 'Center'
+        .extent '200', '200'
         .size (err, size) ->
             photo.width = size.width
             photo.height = size.height
