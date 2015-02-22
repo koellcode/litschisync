@@ -35,7 +35,7 @@ module.exports = (lychee) ->
             return done() if exists
 
             copyReader = fs.createReadStream photo.meta.absolutePath
-            copyReader.on 'end', => @_insertPhotoToDB photo, done
+            copyReader.once 'end', => @_insertPhotoToDB photo, done
 
             @_transformThumb copyReader, photo
             @_copyOriginal copyReader, photo
@@ -74,13 +74,13 @@ module.exports = (lychee) ->
                 height: 500
 
         reader.pipe(resize()).pipe(thumbWriter)
-        thumbWriter.on 'finish', -> console.log "#{absoluteThumbPath} generated"
-        thumbWriter.on 'error', (err) -> console.log "writer error: ", err
+        thumbWriter.once 'finish', -> console.log "#{absoluteThumbPath} generated"
+        thumbWriter.once 'error', (err) -> console.log "writer error: ", err
 
     _copyOriginal: (reader, photo) ->
         absoluteBigPath = photo.meta.absolutePathBigTarget
         outWriter = fs.createWriteStream absoluteBigPath
-        outWriter.on 'finish', -> console.log "#{absoluteBigPath} copied"
+        outWriter.once 'finish', -> console.log "#{absoluteBigPath} copied"
         reader.pipe(outWriter)
 
     _extractFileInfo: (absolutePath) ->
