@@ -1,6 +1,6 @@
 fs = require 'fs'
 crypto = require 'crypto'
-gm = require 'graphicsmagick-stream'
+gm = require 'gm'
 async = require 'async'
 just = require 'string-just'
 mkdirp = require 'mkdirp'
@@ -35,9 +35,9 @@ module.exports = (lychee) ->
             return done() if exists
 
             copyReader = fs.createReadStream photo.meta.absolutePath
-            copyReader.once 'end', => @_insertPhotoToDB photo, done
+            copyReader.once 'end', => @_insertPhotoToDB photo
 
-            @_transformThumb copyReader, photo
+            @_transformThumb copyReader, photo, done
             @_copyOriginal copyReader, photo
 
     removeFile: (file, done = ->) ->
@@ -64,17 +64,17 @@ module.exports = (lychee) ->
         shasum.update filepath
         shasum.digest 'hex'
 
-    _transformThumb: (reader, photo) ->
+    _transformThumb: (reader, photo, done) ->
         absoluteThumbPath = photo.meta.absolutePathThumbTarget
         thumbWriter = fs.createWriteStream absoluteThumbPath
-        resize = gm
-            format: 'jpg'
-            scale:
-                width: 500
-                height: 500
+        gm reader
+        .resize 500, 500
+        .stream (err, stdout) ->
+            stdout.pipe(thumbWriter)
 
-        reader.pipe(resize()).pipe(thumbWriter)
-        thumbWriter.once 'finish', -> console.log "#{absoluteThumbPath} generated"
+        thumbWriter.once 'finish', ->
+            console.log "#{absoluteThumbPath} generated"
+            done()
         thumbWriter.once 'error', (err) -> console.log "writer error: ", err
 
     _copyOriginal: (reader, photo) ->
