@@ -89,6 +89,8 @@ module.exports = (lychee) ->
         .size (err, size) ->
             photo.width = size.width
             photo.height = size.height
+            # new data new database call :)
+            lychee.updatePhoto photo
         .stream (err, stdout) ->
             stdout.pipe(thumbWriter)
 
