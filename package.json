@@ -26,6 +26,7 @@
     "mkdirp": "*",
     "mariastream": "koellcode/mariastream",
     "string-just": "*",
-    "commander": "*"
+    "commander": "*",
+    "exif": "*"
   }
 }
