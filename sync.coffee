@@ -35,11 +35,9 @@ module.exports = (lychee) ->
             return done() if exists
 
             lychee.insertPhoto photo
-            .bind this
-            .then ->
-                copyReader = fs.createReadStream photo.meta.absolutePath
-                @_transformThumb copyReader, photo, done
-                @_copyOriginal copyReader, photo
+            copyReader = fs.createReadStream photo.meta.absolutePath
+            @_transformThumb copyReader, photo, done
+            @_copyOriginal copyReader, photo
 
     removeFile: (file, done = ->) ->
         photo = @_extractFileInfo abspath file

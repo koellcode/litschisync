@@ -1,6 +1,7 @@
 Promise = require 'bluebird'
 mariastream = require 'mariastream'
 just = require 'string-just'
+ys = require 'ys-hash'
 tables =
     album: 'lychee_albums'
     photos: 'lychee_photos'
@@ -33,10 +34,12 @@ module.exports = ({host, db, user, password}) ->
         client.connect {host, db, user, password}, cb
 
     createAlbum: (title, publish = 0, sysstamp = new Date().getTime() / 1000) -> new Promise (resolve, reject) =>
-        func = "insert into #{db}.#{tables.album}"
-        columns = ['title', 'sysstamp', 'public', 'password']
+        func = "insert ignore into #{db}.#{tables.album}"
+        columns = ['id', 'title', 'sysstamp', 'public', 'password']
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
+
         client.statement(statement).execute
+            id: @_createAlbumId title
             title: title
             sysstamp: sysstamp
             public: publish
@@ -149,6 +152,9 @@ module.exports = ({host, db, user, password}) ->
     _generatePhotoID: ->
         just.ljust "#{Date.now()}", 14, "#{@_getRandomInt 0, 9}"
 
-
-
-
+    _createAlbumId: (path) ->
+        # indentify your album unique through its absolute path
+        ys.set_symbols '0123456789'
+        ys.set_mask_len 32
+        id = ys.hash path
+        parseInt "#{id.slice 1}#{id[0]}"
