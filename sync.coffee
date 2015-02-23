@@ -79,7 +79,6 @@ module.exports = (lychee) ->
     _exifDateToISO8601: (exifDate) ->
         # hopefully this string is part of exif spec....
         # '2011:02:12 17:27:09' to ISO-8601
-        console.log exifDate
         [date, time] = exifDate.split ' '
         date = date.replace /:/g, '-'
         "#{date}T#{time}"
