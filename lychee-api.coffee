@@ -1,5 +1,6 @@
 Promise = require 'bluebird'
 mariastream = require 'mariastream'
+just = require 'string-just'
 tables =
     album: 'lychee_albums'
     photos: 'lychee_photos'
@@ -49,7 +50,8 @@ module.exports = ({host, db, user, password}) ->
             return reject new ALBUM_CREATION_ERROR err.message if err
             resolve id: info.insertId
 
-    insertPhoto: (imageModel) -> new Promise (resolve, reject) =>
+    addPhoto: (imageModel) -> new Promise (resolve, reject) =>
+        imageModel = @_cloneAndStripModel imageModel
         func = "insert into #{db}.#{tables.photos}"
         columns = Object.keys(imageModel)
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
@@ -98,6 +100,22 @@ module.exports = ({host, db, user, password}) ->
             console.log "removed #{info.affectedRows} albums"
             resolve()
 
+    insertPhoto: (imageModel) -> new Promise (resolve, reject) =>
+        albumTitle = imageModel.meta.parentName
+        imageModel.id = @_generatePhotoID()
+
+        @albumExist albumTitle
+        .bind this
+        .catch ALBUM_NOT_EXIST_ERROR, ->
+            @createAlbum albumTitle
+        .then (albumInfo) ->
+            imageModel.album = albumInfo.id
+            @addPhoto imageModel
+            console.log "#{imageModel.title} written in DB"
+            resolve()
+        .catch Error, (err) ->
+            reject err
+
     reset: -> new Promise (resolve, reject) =>
         @resetPhotos()
         .then => @resetAlbums()
@@ -109,5 +127,22 @@ module.exports = ({host, db, user, password}) ->
     _getVal: (columns) ->
         columns[0] = ":#{columns[0]}"
         columns.join ', :'
+
+    _getUpdate: (columns) ->
+        columns.map (column) -> "#{column} = :#{column}"
+        .join ', '
+
+    _cloneAndStripModel: (model) ->
+        clone = JSON.parse JSON.stringify model
+        delete clone.meta
+        return clone
+
+    _getRandomInt: (min, max) ->
+        Math.floor(Math.random() * (max - min + 1)) + min
+
+    _generatePhotoID: ->
+        just.ljust "#{Date.now()}", 14, "#{@_getRandomInt 0, 9}"
+
+
 
 

@@ -2,7 +2,6 @@ fs = require 'fs'
 crypto = require 'crypto'
 gm = require 'gm'
 async = require 'async'
-just = require 'string-just'
 mkdirp = require 'mkdirp'
 {abspath} = require('file').path
 Promise = require 'bluebird'
@@ -18,7 +17,7 @@ unlink = Promise.promisify fs.unlink
 
 module.exports = (lychee) ->
     thumbnailQueue = null
-    {HASH_NOT_EXIST_ERROR, ALBUM_NOT_EXIST_ERROR} = lychee.errors()
+    {HASH_NOT_EXIST_ERROR} = lychee.errors()
 
     start: (localFiles) ->
         localFiles = [localFiles] if not Array.isArray localFiles
@@ -34,11 +33,12 @@ module.exports = (lychee) ->
         @_fileExist photo.meta.absolutePath, (exists) =>
             return done() if exists
 
-            copyReader = fs.createReadStream photo.meta.absolutePath
-            @_transformThumb copyReader, photo, =>
-                @_insertPhotoToDB photo, done
-
-            @_copyOriginal copyReader, photo
+            lychee.insertPhoto photo
+            .bind this
+            .then ->
+                copyReader = fs.createReadStream photo.meta.absolutePath
+                @_transformThumb copyReader, photo, done
+                @_copyOriginal copyReader, photo
 
     removeFile: (file, done = ->) ->
         photo = @_extractFileInfo abspath file
@@ -106,28 +106,5 @@ module.exports = (lychee) ->
         fotoModel.url = fotoModel.thumbUrl = "#{fotoModel.checksum}.#{fotoModel.meta.extension}"
 
         return fotoModel
-
-    _getRandomInt: (min, max) ->
-        Math.floor(Math.random() * (max - min + 1)) + min
-
-    _generatePhotoID: ->
-        just.ljust "#{Date.now()}", 14, "#{@_getRandomInt 0, 9}"
-
-    _insertPhotoToDB: (photo, done = ->) ->
-        albumTitle = photo.meta.parentName
-        photo.id = @_generatePhotoID()
-        delete photo.meta
-
-        lychee.albumExist albumTitle
-        .catch ALBUM_NOT_EXIST_ERROR, ->
-            lychee.createAlbum albumTitle
-        .then (albumInfo) ->
-            photo.album = albumInfo.id
-            lychee.insertPhoto photo
-            console.log "#{photo.title} written in DB"
-            done()
-        .catch Error, (err) ->
-            throw err
-
 
 
