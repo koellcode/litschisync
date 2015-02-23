@@ -4,7 +4,7 @@ config = require './config'
 lychee = require('./lychee-api')(config.lychee_database)
 sync = require('./sync')(lychee)
 
-watcher = beholder "#{config.lychee_sync_dir}/**/*"
+watcher = beholder "#{config.lychee_sync_dir}/*/*.+(jpg|JPG|jpeg)"
 program = require 'commander'
 
 
