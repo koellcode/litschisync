@@ -5,6 +5,7 @@ async = require 'async'
 mkdirp = require 'mkdirp'
 {abspath} = require('file').path
 Promise = require 'bluebird'
+{ExifImage} = require 'exif'
 
 config = require './config'
 Photo = require './model/photo'
@@ -64,9 +65,25 @@ module.exports = (lychee) ->
         shasum.update filepath
         shasum.digest 'hex'
 
+    _exifDateToISO8601: (exifDate) ->
+        # hopefully this string is part of exif spec....
+        # '2011:02:12 17:27:09' to ISO-8601
+        [date, time] = exifDate.split ' '
+        date = date.replace /:/g, '-'
+        "#{date}T#{time}"
+
     _transformThumb: (reader, photo, done) ->
         absoluteThumbPath = photo.meta.absolutePathThumbTarget
         thumbWriter = fs.createWriteStream absoluteThumbPath
+        new ExifImage image: photo.meta.absolutePath, (err, data) =>
+            return unless data?
+            {CreateDate} = data.exif
+            iso8601 = @_exifDateToISO8601(CreateDate)
+            photo.takestamp = new Date(iso8601).getTime() / 1000
+            # TODO: add more exif when time come
+            # update db meanwhile
+            lychee.updatePhoto photo
+
         gm reader
         .resize '200', '200^'
         .gravity 'Center'

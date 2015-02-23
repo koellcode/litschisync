@@ -32,12 +32,6 @@ module.exports = ({host, db, user, password}) ->
 
         client.connect {host, db, user, password}, cb
 
-    getAlbums: ->
-        client.statement "SELECT title FROM #{db}.#{tables.album}"
-        .readable()
-        .pipe inspectpoint()
-        .pipe process.stdout
-
     createAlbum: (title, publish = 0, sysstamp = new Date().getTime() / 1000) -> new Promise (resolve, reject) =>
         func = "insert into #{db}.#{tables.album}"
         columns = ['title', 'sysstamp', 'public', 'password']
@@ -55,6 +49,18 @@ module.exports = ({host, db, user, password}) ->
         func = "insert into #{db}.#{tables.photos}"
         columns = Object.keys(imageModel)
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
+        client.statement(statement).execute imageModel, (err, rows, info) ->
+            return reject err if err
+            # TODO: more semantic error handling here plz
+            resolve()
+
+    updatePhoto: (imageModel) -> new Promise (resolve, reject) =>
+        imageModel = @_cloneAndStripModel imageModel
+        delete imageModel.id
+
+        func = "update #{db}.#{tables.photos}"
+        columns = Object.keys(imageModel)
+        statement = "#{func} SET #{@_getUpdate columns} WHERE checksum = :checksum"
         client.statement(statement).execute imageModel, (err, rows, info) ->
             return reject err if err
             # TODO: more semantic error handling here plz
