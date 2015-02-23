@@ -103,10 +103,10 @@ module.exports = ({host, db, user, password}) ->
     insertPhoto: (imageModel) -> new Promise (resolve, reject) =>
         albumTitle = imageModel.meta.parentName
         imageModel.id = @_generatePhotoID()
+        imageModel.album = @_createAlbumId albumTitle
 
         @createAlbum albumTitle
         .then (albumInfo) =>
-            imageModel.album = albumInfo.id
             @addPhoto imageModel
             console.log "#{imageModel.title} written in DB"
             resolve()
