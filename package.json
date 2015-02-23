@@ -27,6 +27,7 @@
     "mariastream": "koellcode/mariastream",
     "string-just": "*",
     "commander": "*",
-    "exif": "*"
+    "exif": "*",
+    "ys-hash": "*"
   }
 }
