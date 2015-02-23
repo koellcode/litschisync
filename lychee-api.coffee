@@ -8,10 +8,6 @@ tables =
 
 client = null
 
-class HASH_NOT_EXIST_ERROR extends Error
-    constructor: (message) ->
-        super message
-
 class ALBUM_CREATION_ERROR extends Error
     constructor: (message) ->
         super message
@@ -23,7 +19,6 @@ class ALBUM_NOT_EXIST_ERROR extends Error
 module.exports = ({host, db, user, password}) ->
 
     errors: ->
-        HASH_NOT_EXIST_ERROR: HASH_NOT_EXIST_ERROR
         ALBUM_NOT_EXIST_ERROR: ALBUM_NOT_EXIST_ERROR
 
     connect: (cb = ->) ->
@@ -33,7 +28,7 @@ module.exports = ({host, db, user, password}) ->
 
         client.connect {host, db, user, password}, cb
 
-    createAlbum: (title, publish = 0, sysstamp = new Date().getTime() / 1000) -> new Promise (resolve, reject) =>
+    createAlbum: (title, sysstamp, publish = 0) -> new Promise (resolve, reject) =>
         func = "insert ignore into #{db}.#{tables.album}"
         columns = ['id', 'title', 'sysstamp', 'public', 'password']
         statement = "#{func} (#{@_getDef columns}) VALUES (#{@_getVal columns})"
@@ -80,7 +75,7 @@ module.exports = ({host, db, user, password}) ->
         .readable checksum: sha
         .on 'data', (data) ->
             if data.exist is '0'
-                reject new HASH_NOT_EXIST_ERROR 'hash not exist in db'
+                resolve()
             else
                 resolve sha
         .on 'error', (err) ->
@@ -105,7 +100,7 @@ module.exports = ({host, db, user, password}) ->
         imageModel.id = @_generatePhotoID()
         imageModel.album = @_createAlbumId albumTitle
 
-        @createAlbum albumTitle
+        @createAlbum albumTitle, imageModel.takestamp
         .then (albumInfo) =>
             @addPhoto imageModel
             console.log "#{imageModel.title} written in DB"
