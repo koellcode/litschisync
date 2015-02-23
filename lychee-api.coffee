@@ -75,15 +75,6 @@ module.exports = ({host, db, user, password}) ->
             return reject err if err
             resolve()
 
-    albumExist: (title) -> new Promise (resolve, reject) ->
-        client.statement "SELECT COUNT(title) as exist, id FROM #{db}.#{tables.album} WHERE title = :title"
-        .readable title: title
-        .on 'data', (data) ->
-            if data.exist is '0'
-                reject new ALBUM_NOT_EXIST_ERROR 'album not exist in db'
-            else
-                resolve data
-
     hashExist: (sha) -> new Promise (resolve, reject) ->
         client.statement "SELECT COUNT(checksum) as exist FROM #{db}.#{tables.photos} WHERE checksum = :checksum"
         .readable checksum: sha
@@ -113,11 +104,8 @@ module.exports = ({host, db, user, password}) ->
         albumTitle = imageModel.meta.parentName
         imageModel.id = @_generatePhotoID()
 
-        @albumExist albumTitle
-        .bind this
-        .catch ALBUM_NOT_EXIST_ERROR, ->
-            @createAlbum albumTitle
-        .then (albumInfo) ->
+        @createAlbum albumTitle
+        .then (albumInfo) =>
             imageModel.album = albumInfo.id
             @addPhoto imageModel
             console.log "#{imageModel.title} written in DB"
