@@ -21,7 +21,7 @@ module.exports = (lychee) ->
 
     start: (localFiles) ->
         localFiles = [localFiles] if not Array.isArray localFiles
-        thumbnailQueue = async.queue @addFile.bind(this), 4
+        thumbnailQueue = async.queue @addFile.bind(this), config.max_concurrent
 
         async.each ["#{bigFiles}", "#{thumbFiles}"], (path, done) ->
             mkdirp path, null, done

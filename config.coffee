@@ -6,3 +6,4 @@ module.exports =
         db: 'lychee'
         user: 'lychee'
         password: 'yourdbpassword'
+    max_concurrent: 4
