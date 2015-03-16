@@ -7,8 +7,4 @@ syncs your awesome cat pictures with your lychee photo albums
 - syncs add, remove and update actions
 
 
-# test
-![Alt text](https://github.com/cirosantilli/test/blob/master/svg.svg)
-<img src="https://github.com/cirosantilli/test/blob/master/svg.svg">
-
 
